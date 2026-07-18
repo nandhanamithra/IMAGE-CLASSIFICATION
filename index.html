@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat or Dog?</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          slate: { 950: '#020617' },
+        },
+        fontFamily: {
+          display: ['Sora', 'ui-sans-serif', 'system-ui'],
+          body:    ['Inter', 'ui-sans-serif', 'system-ui'],
+        },
+        keyframes: {
+          'fade-up':   { '0%': { opacity: '0', transform: 'translateY(16px)' },
+                         '100%': { opacity: '1', transform: 'translateY(0)' } },
+          'fade-in':   { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+          'pop':       { '0%': { transform: 'scale(0.8)', opacity: '0' },
+                         '70%': { transform: 'scale(1.06)' },
+                         '100%': { transform: 'scale(1)', opacity: '1' } },
+          'bar-fill':  { '0%': { width: '0%' }, '100%': { width: 'var(--bar-w)' } },
+          'spin-once': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+          'pulse-ring':{ '0%,100%': { transform: 'scale(1)', opacity: '.6' },
+                         '50%':     { transform: 'scale(1.12)', opacity: '.3' } },
+        },
+        animation: {
+          'fade-up':   'fade-up .5s ease forwards',
+          'fade-in':   'fade-in .4s ease forwards',
+          'pop':       'pop .45s cubic-bezier(.22,1,.36,1) forwards',
+          'bar-fill':  'bar-fill .8s cubic-bezier(.22,1,.36,1) forwards',
+          'pulse-ring':'pulse-ring 1.8s ease-in-out infinite',
+        },
+      }
+    }
+  }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* CSS custom properties drive the palette shift */
+  :root {
+    --accent:     #6366f1;   /* idle: indigo */
+    --accent-dim: rgba(99,102,241,.15);
+    --glow:       rgba(99,102,241,.35);
+    --bg-from:    #0c0f1a;
+    --bg-to:      #0c0f1a;
+  }
+  body {
+    background: linear-gradient(145deg, var(--bg-from) 0%, var(--bg-to) 100%);
+    transition: --accent 0.8s, background 0.8s;
+  }
+
+  /* cat verdict → amber */
+  body.verdict-cat {
+    --accent:     #f59e0b;
+    --accent-dim: rgba(245,158,11,.15);
+    --glow:       rgba(245,158,11,.4);
+    --bg-from:    #0f0a00;
+    --bg-to:      #1a1000;
+    transition: background 0.9s ease;
+  }
+  /* dog verdict → blue */
+  body.verdict-dog {
+    --accent:     #60a5fa;
+    --accent-dim: rgba(96,165,250,.15);
+    --glow:       rgba(96,165,250,.4);
+    --bg-from:    #00090f;
+    --bg-to:      #00111a;
+    transition: background 0.9s ease;
+  }
+
+  /* Accent-coloured utilities driven by CSS var */
+  .acc-ring  { box-shadow: 0 0 0 2px var(--accent); }
+  .acc-glow  { box-shadow: 0 0 28px 4px var(--glow); }
+  .acc-bg    { background: var(--accent-dim); }
+  .acc-text  { color: var(--accent); }
+  .acc-border{ border-color: var(--accent) !important; }
+  .acc-fill  { background: var(--accent); }
+
+  /* Drop-zone dashed border animates on drag */
+  .drop-zone {
+    border: 2px dashed #334155;
+    transition: border-color .2s, background .2s;
+  }
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* Confidence bar */
+  .conf-bar-fill {
+    width: var(--bar-w, 0%);
+    animation: bar-fill .8s .2s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  /* Spinner ring */
+  .spinner {
+    border: 3px solid rgba(255,255,255,.15);
+    border-top-color: var(--accent);
+    border-radius: 9999px;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+</head>
+
+<body class="min-h-screen font-body text-slate-200 antialiased">
+
+<!-- Subtle grid texture overlay -->
+<div class="pointer-events-none fixed inset-0 opacity-[0.03]"
+     style="background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px);
+            background-size:40px 40px">
+</div>
+
+<div class="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12">
+
+  <!-- Header -->
+  <header class="mb-10 text-center animate-fade-up" style="animation-delay:.05s;opacity:0">
+    <p class="mb-3 font-display text-xs tracking-[.2em] uppercase acc-text" id="model-badge">
+      {% if model_ready %}MobileNetV2 · Transfer Learning · Ready{% else %}Model not loaded — run train_model.py{% endif %}
+    </p>
+    <h1 class="font-display text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
+      Cat <span class="acc-text">or</span> Dog?
+    </h1>
+    <p class="mt-3 text-slate-400 text-base max-w-xs mx-auto leading-relaxed">
+      Drop any photo. The neural network gives its verdict in under a second.
+    </p>
+  </header>
+
+  <!-- Main card -->
+  <div class="w-full max-w-md animate-fade-up" style="animation-delay:.15s;opacity:0">
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-md p-6 shadow-2xl">
+
+      <!-- Drop zone -->
+      <div id="drop-zone"
+           class="drop-zone relative flex flex-col items-center justify-center rounded-xl cursor-pointer
+                  transition-all select-none overflow-hidden"
+           style="min-height:240px"
+           tabindex="0" role="button" aria-label="Upload image">
+
+        <!-- Idle state -->
+        <div id="idle-state" class="flex flex-col items-center gap-3 py-8 px-4 text-center">
+          <!-- Paw icon -->
+          <div class="relative">
+            <div class="absolute inset-0 rounded-full acc-bg animate-pulse-ring"></div>
+            <div class="relative w-16 h-16 rounded-full acc-bg flex items-center justify-center text-3xl">
+              🐾
+            </div>
+          </div>
+          <p class="text-slate-300 font-medium text-sm">Drag & drop a photo here</p>
+          <p class="text-slate-500 text-xs">or click to browse · JPG, PNG, WebP · max 10 MB</p>
+        </div>
+
+        <!-- Preview state (hidden by default) -->
+        <div id="preview-state" class="hidden w-full h-full">
+          <img id="preview-img"
+               class="w-full h-full object-cover rounded-xl"
+               style="max-height:320px;object-fit:cover"
+               src="" alt="Uploaded image preview">
+          <!-- Change-photo overlay -->
+          <div class="absolute inset-0 flex items-end justify-center pb-3 opacity-0 hover:opacity-100 transition-opacity">
+            <span class="bg-black/70 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+              Click to change photo
+            </span>
+          </div>
+        </div>
+
+        <!-- Hidden file input -->
+        <input type="file" id="file-input" accept="image/*" class="hidden">
+      </div>
+
+      <!-- Classify button -->
+      <button id="classify-btn"
+              class="mt-4 w-full h-12 rounded-xl font-display font-semibold text-sm tracking-wide
+                     text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed
+                     flex items-center justify-center gap-2 acc-fill"
+              style="background:var(--accent)"
+              disabled>
+        <span id="btn-label">Classify</span>
+        <div id="btn-spinner" class="hidden w-5 h-5 spinner"></div>
+      </button>
+
+      <!-- Error message -->
+      <div id="error-box" class="hidden mt-3 rounded-lg bg-red-950/60 border border-red-800/60 px-4 py-3">
+        <p class="text-red-400 text-sm" id="error-text"></p>
+      </div>
+
+    </div><!-- /card -->
+
+    <!-- Result card (appears below after classification) -->
+    <div id="result-card"
+         class="hidden mt-4 rounded-2xl border border-slate-800 bg-slate-900/70
+                backdrop-blur-md p-6 shadow-2xl animate-pop">
+
+      <!-- Verdict row -->
+      <div class="flex items-center gap-4">
+        <div id="result-emoji"
+             class="text-5xl w-18 h-18 rounded-2xl acc-bg flex items-center justify-center
+                    select-none shrink-0 p-3">
+        </div>
+        <div>
+          <p class="text-xs tracking-widest uppercase text-slate-500 font-medium mb-1">Verdict</p>
+          <p id="result-label"
+             class="font-display text-3xl font-extrabold text-white leading-none acc-text">
+          </p>
+          <p class="text-slate-400 text-sm mt-1">
+            <span id="result-conf" class="font-semibold acc-text"></span> confidence
+          </p>
+        </div>
+      </div>
+
+      <!-- Confidence bar -->
+      <div class="mt-5">
+        <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+          <span id="bar-label-low"></span>
+          <span id="bar-label-high"></span>
+        </div>
+        <div class="h-2.5 rounded-full bg-slate-800 overflow-hidden">
+          <div id="conf-bar"
+               class="conf-bar-fill h-full rounded-full acc-fill"
+               style="--bar-w:0%">
+          </div>
+        </div>
+      </div>
+
+      <!-- Classify another -->
+      <button id="reset-btn"
+              class="mt-5 w-full h-10 rounded-xl border border-slate-700 text-slate-400
+                     text-sm font-medium hover:bg-slate-800 hover:text-white transition-all">
+        Classify another photo
+      </button>
+    </div>
+
+  </div><!-- /max-w-md -->
+
+  <footer class="mt-10 text-center text-slate-600 text-xs animate-fade-up" style="animation-delay:.3s;opacity:0">
+    Flask · TensorFlow · MobileNetV2 · POST <code class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">/predict</code>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+const dropZone   = document.getElementById("drop-zone");
+const fileInput  = document.getElementById("file-input");
+const idleState  = document.getElementById("idle-state");
+const previewSt  = document.getElementById("preview-state");
+const previewImg = document.getElementById("preview-img");
+const classifyBtn= document.getElementById("classify-btn");
+const btnLabel   = document.getElementById("btn-label");
+const btnSpinner = document.getElementById("btn-spinner");
+const errorBox   = document.getElementById("error-box");
+const errorText  = document.getElementById("error-text");
+const resultCard = document.getElementById("result-card");
+const resultEmoji= document.getElementById("result-emoji");
+const resultLabel= document.getElementById("result-label");
+const resultConf = document.getElementById("result-conf");
+const confBar    = document.getElementById("conf-bar");
+const barLow     = document.getElementById("bar-label-low");
+const barHigh    = document.getElementById("bar-label-high");
+const resetBtn   = document.getElementById("reset-btn");
+
+let selectedFile = null;
+
+function showError(msg) {
+  errorBox.classList.remove("hidden");
+  errorText.textContent = msg;
+}
+function clearError() {
+  errorBox.classList.add("hidden");
+  errorText.textContent = "";
+}
+
+function setFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  clearError();
+  resultCard.classList.add("hidden");
+  document.body.className = "";
+
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  idleState.classList.add("hidden");
+  previewSt.classList.remove("hidden");
+  classifyBtn.disabled = false;
+}
+
+// Click to open file picker
+dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
+fileInput.addEventListener("change", () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+// Drag-and-drop
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+
+// Paste from clipboard
+document.addEventListener("paste", e => {
+  const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
+  if (f) setFile(f);
+});
+
+// Classify
+classifyBtn.addEventListener("click", async () => {
+  if (!selectedFile) return;
+  clearError();
+  btnLabel.classList.add("hidden");
+  btnSpinner.classList.remove("hidden");
+  classifyBtn.disabled = true;
+
+  const fd = new FormData();
+  fd.append("image", selectedFile);
+
+  try {
+    const res = await fetch("/predict", { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (!data.success) {
+      showError(data.error || "Classification failed.");
+      return;
+    }
+
+    // Palette shift
+    document.body.className = `verdict-${data.color}`;
+
+    // Populate result
+    resultEmoji.textContent = data.emoji;
+    resultLabel.textContent = data.label;
+    resultConf.textContent  = `${data.confidence}%`;
+
+    const pct = `${data.confidence}%`;
+    confBar.style.setProperty("--bar-w", pct);
+    // Reset so animation replays
+    confBar.style.width = "0%";
+    void confBar.offsetWidth;
+    confBar.style.width = "";
+
+    if (data.color === "cat") {
+      barLow.textContent  = "Definitely a dog";
+      barHigh.textContent = "Definitely a cat";
+    } else {
+      barLow.textContent  = "Definitely a cat";
+      barHigh.textContent = "Definitely a dog";
+    }
+
+    resultCard.classList.remove("hidden");
+    resultCard.classList.add("animate-pop");
+
+  } catch (err) {
+    showError("Could not reach the server. Is Flask running?");
+  } finally {
+    btnLabel.classList.remove("hidden");
+    btnSpinner.classList.add("hidden");
+    classifyBtn.disabled = false;
+  }
+});
+
+// Reset
+resetBtn.addEventListener("click", () => {
+  selectedFile = null;
+  fileInput.value = "";
+  previewImg.src = "";
+  idleState.classList.remove("hidden");
+  previewSt.classList.add("hidden");
+  classifyBtn.disabled = true;
+  resultCard.classList.add("hidden");
+  document.body.className = "";
+  clearError();
+});
+</script>
+</body>
+</html>
