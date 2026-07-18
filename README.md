@@ -23,7 +23,7 @@ The code and the output along with the prediction are given below.
 [Watch Demo](./output/Recording%202026-07-19%20021621.mp4)
 
 ## *Project report*
-
+[Project Report](./project_report.pdf)
 
 ## Final Answer
 Given an input image, the model predicts whether it is a Cat 🐱 or a Dog 🐶 along with the confidence percentage.
