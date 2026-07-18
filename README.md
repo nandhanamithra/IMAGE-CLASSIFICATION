@@ -20,7 +20,7 @@ The code and the output along with the prediction are given below.
 2. A Flask web app was also built so the model can be used by uploading images through a browser instead of the command line. The code is saved in the folder, containing `app.py`, `templates/index.html`. A demo recording of the web app is available below.
    
 ## *Web App*
-[Watch the recording](output/Recording%2026-07-19%021621.mp4)
+[Watch Demo](./output/Recording%202026-07-19%20021621.mp4)
 
 ## Final Answer
 Given an input image, the model predicts whether it is a Cat 🐱 or a Dog 🐶 along with the confidence percentage.
