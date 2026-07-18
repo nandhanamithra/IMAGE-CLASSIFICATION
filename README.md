@@ -11,23 +11,23 @@ Below,
 The code and the output along with the prediction are given below.
 ## *Source Code*
 ![Code](output/program.png)
-## *output*
-![Predict](output/output.png)
 ## *Output*
-![Output](output/output.png)
+![Predict](output/output.png)
+## *WEB APP PREDICTION*
+![Output](output/1.png)
+![Output](output/2.png)
 
-2. A Flask web app was also built so the model can be used by uploading images through a browser instead of the command line. The code is saved in the `web/` folder, containing `app.py`, `templates/index.html`. A demo recording of the web app is available at `web/Screen Recording 2026-07-18.mp4`.
+2. A Flask web app was also built so the model can be used by uploading images through a browser instead of the command line. The code is saved in the folder, containing `app.py`, `templates/index.html`. A demo recording of the web app is available below.
+   
 ## *Web App*
-[Watch the demo recording](web/Screen%20Recording%202026-07-18.mp4)
+[Watch the recording](web/Screen%20Recording%202026-07-18.mp4)
 
 ## Final Answer
 Given an input image, the model predicts whether it is a Cat 🐱 or a Dog 🐶 along with the confidence percentage.
+
 # What I Learned
 By this assignment and class, I learned:
-1. Convolutional Neural Networks (CNN) and Transfer Learning
-2. Using a pretrained MobileNetV2 model with frozen base layers
-3. Image preprocessing — resizing and rescaling for MobileNetV2 input
-4. Building a Flask API to accept image uploads and return predictions
-5. Building a drag-and-drop web UI to interact with the model
+1. Image Classification
+2. Using MobileNetV2
 
 :D
